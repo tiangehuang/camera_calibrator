@@ -11,3 +11,4 @@ link_libraries(
 )
 
 add_executable(app src/app.cpp)
+add_executable(convert src/convertor.cpp)

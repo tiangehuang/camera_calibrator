@@ -13,36 +13,37 @@ using namespace cv;
 class CalibratorApp
 {
 private:
-    string config_path;
     bool fish_eye = false;
     Size image_size;
     Mat K, D;
-    Mat R, t;
+    Mat R, T;
     Mat map1, map2;
 
-    bool save()
+    bool save(string config_path)
     {
-        FileStorage fs(this->config_path, FileStorage::WRITE);
+        FileStorage fs(config_path, FileStorage::WRITE);
         fs << "fish_eye" << fish_eye;
         fs << "image_size" << image_size;
         fs << "K" << K;
         fs << "D" << D;
-        // fs << "R" << R;
-        // fs << "t" << t;
+        fs << "R" << R;
+        fs << "T" << T;
         fs.release();
 
         cout << "========== storage intrinsics finish." << endl;
+
+        return true;
     }
 
-    void init()
+    void init(string config_path)
     {
-        FileStorage fs(this->config_path, FileStorage::READ);
+        FileStorage fs(config_path, FileStorage::READ);
         fs["fish_eye"] >> fish_eye;
         fs["image_size"] >> image_size;
         fs["K"] >> K;
         fs["D"] >> D;
-        // fs["R"] >> R;
-        // fs["t"] >> t;
+        fs["R"] >> R;
+        fs["T"] >> T;
         fs.release();
 
         initUndistortRectifyMap(K, D, Mat(), K, image_size, CV_32FC1, map1, map2);
@@ -53,14 +54,14 @@ private:
 public:
     CalibratorApp()
     {
-        config_path = "../config/camera_intrinsics_extrinsics.yaml";
-        if (1)
+        string config_path = "../config/calibrrator.yaml";
+        if (0)
         {
             CalibrateIntrinsics();
-            // CalibrateExtrinsics();
-            save();
+            CalibrateExtrinsics();
+            save(config_path);
         }
-        init();
+        init(config_path);
     }
 
     Mat UndistortImage(Mat frame)
@@ -92,6 +93,7 @@ public:
                 // path = path.replace(path.find("intrinsics"), 10, "draw");
                 TermCriteria criteria(TermCriteria::Type::MAX_ITER, 30, 0.001);
                 cornerSubPix(gray, points, Size(5, 5), Size(-1, -1), criteria);
+                
                 drawChessboardCorners(image, PATTERN_SIZE, points, found);
                 // imwrite(path, image);
                 corners.push_back(points);
@@ -136,14 +138,36 @@ public:
 
     void CalibrateExtrinsics()
     {
-        vector<Point3f> object_points;
+        // (-420, 300, 0)
+        // (420, 300, 0)
+        // (420, -300, 0)
+        // (-420, -300, 0)
+        vector<Point3f> world_points;
+        world_points.push_back(Point3f(-420, 300, 0));
+        world_points.push_back(Point3f(420, 300, 0));
+        world_points.push_back(Point3f(420, -300, 0));
+        world_points.push_back(Point3f(-420, -300, 0));
+        // (857.90546, 988.28033)
+        // (1144.7784,  989.4356)
+        // (1183.3334, 1052.7286)
+        // ( 846.2014, 1051.0554)
         vector<Point2f> image_points;
+        image_points.push_back(Point2f(857.90546, 988.28033));
+        image_points.push_back(Point2f(1144.7784,  989.4356));
+        image_points.push_back(Point2f(1183.3334, 1052.7286));
+        image_points.push_back(Point2f( 846.2014, 1051.0554));
 
         Mat rvec;
+        Mat R_, T_;
         // opencv4: SOLVEPNP_ITERATIVE
         // opencv3: CV_ITERATIVE
-        solvePnP(object_points, image_points, this->K, this->D, rvec, this->t, false, SOLVEPNP_ITERATIVE);
-        Rodrigues(rvec, this->R);
+        solvePnP(world_points, image_points, this->K, Mat(), rvec, T_, false, SOLVEPNP_ITERATIVE);
+        Rodrigues(rvec, R_);
+
+        FileStorage fs("../config/rt.yaml", FileStorage::WRITE);
+        fs << "R" << R_;
+        fs << "T" << T_;
+        fs.release();
     }
 
 };
@@ -151,21 +175,5 @@ public:
 int main()
 {
     CalibratorApp app;
-    VideoCapture cap;
-    cap.open(4, CAP_ANY);
-    Mat frame;
-    while(1)
-    {
-        cap >> frame;
-        if(frame.empty())
-        {
-            cout << "read fail!" << endl;
-            break;
-        }
-        frame = app.UndistortImage(frame);
-        imshow("live", frame);
-        waitKey(1);
-    }
-    destroyAllWindows();
     return 0;
 }
