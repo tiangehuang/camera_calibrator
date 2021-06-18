@@ -33,14 +33,15 @@ public:
     {
         double Z = 0.;
         Mat pih = Mat::ones(3, 1, CV_64F);
-        pih.at<double>(0, 0) = point.x, pih.at<double>(1, 0) = point.y;
+        pih.at<double>(0, 0) = point.x;
+        pih.at<double>(1, 0) = point.y;
 
-        Mat L_ = R.inv() * K.inv() * pih;
-        Mat R_ = R.inv() * T;
-        double s = (Z + R.at<double>(2, 0)) / L_.at<double>(2, 0);
-        Mat pwh = s * L_ - R_;
+        Mat LS = R.inv() * K.inv() * pih;
+        Mat RS = R.inv() * T;
+        double s = (Z + RS.at<double>(2, 0)) / LS.at<double>(2, 0);
+        Mat pw = s * LS - RS;
 
-        return Point3d(pwh);
+        return Point3d(pw);
     }
 
     Point2d w2i(const Point3d &point)
