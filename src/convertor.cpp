@@ -55,8 +55,9 @@ public:
         pwh.at<double>(2, 0) = point.z;
 
         Mat pih = K * RT * pwh;
+        pih = pih / pih.at<double>(2, 0);
 
-        return Point2d(pih.at<double>(0, 0)/pih.at<double>(2, 0), pih.at<double>(1, 0)/pih.at<double>(2, 0));
+        return Point2d(pih.at<double>(0, 0), pih.at<double>(1, 0));
     }
 };
 
@@ -64,13 +65,13 @@ int main()
 {
     Mat src = imread("../images/extrinsics/2u.jpg");
     Convertor convertor;
-    Point3d pw(0, 15000, 0);
+    Point3d pw(0, 10000, 0);
     Point2d pi = convertor.w2i(pw);
     cout << "pi:" << pi << endl;
 
     //Point2d pi(857.90546, 988.28033);
-    Point3d pw1 = convertor.i2w(pi);
-    cout << "pw:" << pw1 << endl;
+    pw = convertor.i2w(pi);
+    cout << "pw:" << pw << endl;
     circle(src, pi, 5, Scalar(255, 0, 0), -1);
     imshow("draw", src);
     waitKey(0);
